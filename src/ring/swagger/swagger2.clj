@@ -83,7 +83,9 @@
   (let [responses (p/for-map [[k v] responses
                               :let [{:keys [schema headers]} v]]
                     k (-> v
-                          (cond-> schema (update-in [:schema] rsjs/->swagger options))
+                          (cond-> schema (->
+                                           (dissoc :schema)
+                                           (assoc-in [:content :application/json :schema] (rsjs/->swagger schema options))))
                           (cond-> headers (update-in [:headers] (fn [headers]
                                                                   (if headers
                                                                     (->> (for [[k v] headers]
@@ -107,8 +109,10 @@
     k (-> v
           (common/update-in-or-remove-key [:parameters] #(convert-parameters % options) empty?)
           (update-in [:responses] convert-responses options)
-          (cond-> body (assoc-in [:requestBody :content :application/json] (rsjs/->swagger body options)))
-          (cond-> body (dissoc :body)))))
+          (cond-> body (-> (assoc-in [:requestBody :content :application/json :schema] (rsjs/->swagger body options))
+                           (dissoc :body)
+                           (assoc-in [:requestBody :required] (not (rsjs/maybe? body)))
+                           )))))
 
 (defn swagger-path
   "Replaces Compojure/Clout style path params in uri with Swagger style
@@ -189,11 +193,9 @@
 ;; Schema
 ;;
 
-(def swagger-defaults {:swagger "2.0"
-                       :info {:title "Swagger API"
-                              :version "0.0.1"}
-                       :produces ["application/json"]
-                       :consumes ["application/json"]})
+(def swagger-defaults {:openapi "3.0.0"
+                       :info {:title "OpenAPI"
+                              :version "0.0.1"}})
 
 ;;
 ;; Swagger Spec
@@ -245,26 +247,4 @@
             swagger-defaults
             (-> swagger
                 (assoc :paths paths)
-                (assoc :definitions definitions))))))))
-
-#_(swagger-json
-  {:info  {:version        "1.0.0"
-           :title          "Sausages"
-           :description    "Sausage description"
-           :termsOfService "http://helloreverb.com/terms/"
-           :contact        {:name  "My API Team"
-                            :email "foo@example.com"
-                            :url   "http://www.metosin.fi"}
-           :license        {:name "Eclipse Public License"
-                            :url  "http://www.eclipse.org/legal/epl-v10.html"}}
-   :tags  [{:name        "user"
-            :description "User stuff"}]
-   :paths {"/api/ping" {:get {}}
-           "/user/:id" {:post {:summary     "User Api"
-                               :description "User Api description"
-                               :tags        ["user"]
-                               :parameters  {:path {:id s/Str}}
-                               :body User
-                               :responses   {200 {:schema      User
-                                                  :description "Found it!"}
-                                             404 {:description "Ohnoes."}}}}}})
+                (assoc-in [:components :schemas] definitions))))))))
