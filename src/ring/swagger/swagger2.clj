@@ -111,8 +111,7 @@
           (update-in [:responses] convert-responses options)
           (cond-> body (-> (assoc-in [:requestBody :content :application/json :schema] (rsjs/->swagger body options))
                            (dissoc :body)
-                           (assoc-in [:requestBody :required] (not (rsjs/maybe? body)))
-                           )))))
+                           (assoc-in [:requestBody :required] (not (rsjs/maybe? body))))))))
 
 (defn swagger-path
   "Replaces Compojure/Clout style path params in uri with Swagger style
