@@ -11,7 +11,7 @@
     (if properties?
       (merge {:discriminator (name (:dispatch-key e))}
              (json-schema/->swagger (:schema e) {:properties? properties?}))
-      (json-schema/reference e)))
+      (json-schema/reference e "#/components/schemas/")))
 
   schema.experimental.abstract_map.SchemaExtension
   (convert [e _]

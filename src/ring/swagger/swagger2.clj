@@ -39,6 +39,7 @@
 
 (defmulti ^:private extract-parameter (fn [in _ _] in))
 
+;; TODO: THIS BREAKS COMPATIBILITY WITH 2.0
 (defmethod extract-parameter :body [_ model options]
   (if model
     (let [schema (rsc/peek-schema model)
@@ -50,6 +51,7 @@
          :required (not (rsjs/maybe? model))
          :schema schema-json}))))
 
+;; TODO: THIS BREAKS COMPATIBILITY WITH 2.0
 (defmethod extract-parameter :default [in model options]
   (if model
     (for [[k v] (-> model common/value-of stc/schema-value rsc/strict-schema)
@@ -61,8 +63,8 @@
         {:in (name in)
          :name (rsjs/key-name rk)
          :description ""
-         :required (or (= in :path) (s/required-key? k))}
-        json-schema))))
+         :required (or (= in :path) (s/required-key? k))
+         :schema json-schema}))))
 
 (defn- default-response-description
   "uses option :default-response-description-fn to generate
@@ -100,10 +102,13 @@
    maps with parameters and responses transformed to comply
    with Swagger spec as values"
   [operation options]
-  (p/for-map [[k v] operation]
+  (p/for-map [[k v] operation
+              :let [{:keys [body]} v]]
     k (-> v
           (common/update-in-or-remove-key [:parameters] #(convert-parameters % options) empty?)
-          (update-in [:responses] convert-responses options))))
+          (update-in [:responses] convert-responses options)
+          (cond-> body (assoc-in [:requestBody :content :application/json] (rsjs/->swagger body options)))
+          (cond-> body (dissoc :body)))))
 
 (defn swagger-path
   "Replaces Compojure/Clout style path params in uri with Swagger style
@@ -241,3 +246,25 @@
             (-> swagger
                 (assoc :paths paths)
                 (assoc :definitions definitions))))))))
+
+#_(swagger-json
+  {:info  {:version        "1.0.0"
+           :title          "Sausages"
+           :description    "Sausage description"
+           :termsOfService "http://helloreverb.com/terms/"
+           :contact        {:name  "My API Team"
+                            :email "foo@example.com"
+                            :url   "http://www.metosin.fi"}
+           :license        {:name "Eclipse Public License"
+                            :url  "http://www.eclipse.org/legal/epl-v10.html"}}
+   :tags  [{:name        "user"
+            :description "User stuff"}]
+   :paths {"/api/ping" {:get {}}
+           "/user/:id" {:post {:summary     "User Api"
+                               :description "User Api description"
+                               :tags        ["user"]
+                               :parameters  {:path {:id s/Str}}
+                               :body User
+                               :responses   {200 {:schema      User
+                                                  :description "Found it!"}
+                                             404 {:description "Ohnoes."}}}}}})

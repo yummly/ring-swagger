@@ -77,11 +77,14 @@
 (defn reference? [m]
   (contains? m :$ref))
 
-(defn reference [e]
-  (if-let [schema-name (s/schema-name e)]
-    {:$ref (str "#/definitions/" schema-name)}
-    (if (not *ignore-missing-mappings*)
-      (not-supported! e))))
+(defn reference
+  ([e]
+   (reference e "#/definitions/"))
+  ([e path-prefix]
+   (if-let [schema-name (s/schema-name e)]
+     {:$ref (str path-prefix schema-name)}
+     (if (not *ignore-missing-mappings*)
+       (not-supported! e)))))
 
 (defn merge-meta
   [m x {:keys [::no-meta :key-meta]}]
@@ -129,6 +132,9 @@
   ([x]
    (->swagger x {}))
   ([x options]
+   (println "->swagger: " (-> x
+                              (convert options)
+                              (merge-meta x options)))
    (-> x
        (convert options)
        (merge-meta x options))))
@@ -240,15 +246,17 @@
   (convert [e options]
     (assoc (coll-schema e options) :uniqueItems true))
 
+  ;; TODO: REMINDER THIS BREAKS COMPATIBILITY WITH 2.0
   clojure.lang.IPersistentMap
   (convert [e {:keys [properties?]}]
     (if properties?
       {:properties (properties e)}
-      (reference e)))
+      (reference e "#/components/schemas/")))
 
+  ;; TODO: REMINDER THIS BREAKS COMPATIBILITY WITH 2.0
   clojure.lang.Var
   (convert [e _]
-    (reference e)))
+    (reference e "#/components/schemas/")))
 
 ;;
 ;; Schema to Swagger Schema definitions

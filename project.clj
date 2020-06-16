@@ -25,7 +25,8 @@
                                                               commons-codec]]
                                   [ring-mock "0.1.5"]
                                   [metosin/ring-swagger-ui "3.20.1"]
-                                  [javax.servlet/javax.servlet-api "4.0.1"]]}
+                                  [javax.servlet/javax.servlet-api "4.0.1"]
+                                  [cheshire "5.10.0"]]}
              :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}
              :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}}
   :codeina {:sources ["src"]
